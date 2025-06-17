@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Weather Regressor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+      .main-flex {
+        display: flex;
+        gap: 2rem;
+        justify-content: center;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+      }
+      #map {
+        height: 400px;
+        width: 400px;
+        min-width: 300px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      }
+      .data-table-scroll {
+        height: 400px;
+        width: 400px;
+        min-width: 300px;
+        overflow-y: auto;
+        background: #fafbfc;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        padding: 1rem;
+      }
+      @media (max-width: 900px) {
+        .main-flex { flex-direction: column; align-items: center; }
+        #map, .data-table-scroll { width: 100%; min-width: 0; }
+      }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Predict Apparent Temperature</h1>
+        <p>Select a location on the map, then train the model and predict the 'feels-like' temperature.</p>
+        <div class="main-flex">
+          <div>
+            <div id="map"></div>
+            <div style="margin-top:1em;">
+                <label>Latitude: <span id="lat">41.15</span></label>
+                <label>Longitude: <span id="lng">-8.61</span></label>
+            </div>
+            <button id="train-btn" class="btn">Train Model for Location</button>
+            <button id="predict-btn" class="btn" disabled>Predict Feeling Temperature</button>
+            <div id="prediction-result" class="result"></div>
+          </div>
+          <div class="data-table-scroll">
+            <h2 style="margin-top:0;">Live Data Used for On-the-Fly Training</h2>
+            {% autoescape false %}
+            {{ live_data_table }}
+            {% endautoescape %}
+          </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      let selectedLat = 41.15;
+      let selectedLng = -8.61;
+      const map = L.map('map').setView([selectedLat, selectedLng], 8);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      let marker = L.marker([selectedLat, selectedLng], {draggable:true}).addTo(map);
+      marker.on('dragend', function(e) {
+        const pos = marker.getLatLng();
+        selectedLat = pos.lat;
+        selectedLng = pos.lng;
+        document.getElementById('lat').textContent = selectedLat.toFixed(4);
+        document.getElementById('lng').textContent = selectedLng.toFixed(4);
+      });
+      map.on('click', function(e) {
+        selectedLat = e.latlng.lat;
+        selectedLng = e.latlng.lng;
+        marker.setLatLng([selectedLat, selectedLng]);
+        document.getElementById('lat').textContent = selectedLat.toFixed(4);
+        document.getElementById('lng').textContent = selectedLng.toFixed(4);
+      });
+      document.getElementById('train-btn').onclick = async function() {
+        document.getElementById('prediction-result').textContent = 'Training model...';
+        const resp = await fetch('/train', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({lat: selectedLat, lng: selectedLng})
+        });
+        const data = await resp.json();
+        document.getElementById('prediction-result').textContent = data.message;
+        document.getElementById('predict-btn').disabled = false;
+        // Update the live data table
+        if (data.live_data_table) {
+          document.querySelector('.data-table-scroll').innerHTML = '<h2 style="margin-top:0;">Live Data Used for On-the-Fly Training</h2>' + data.live_data_table;
+        }
+      };
+      document.getElementById('predict-btn').onclick = async function() {
+        document.getElementById('prediction-result').textContent = 'Predicting...';
+        const resp = await fetch('/predict', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({lat: selectedLat, lng: selectedLng})
+        });
+        const data = await resp.json();
+        document.getElementById('prediction-result').textContent = data.prediction;
+      };
+    </script>
+</body>
+</html>
