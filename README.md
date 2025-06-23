@@ -35,7 +35,7 @@ serve-and-monitor-ml/
 ### 1. Clone the repository
 ```sh
 git clone <repo-url>
-cd serve-and-monitor-ml
+cd mlops-blueprint
 ```
 
 ### 2. Build and run with Docker Compose
