@@ -1,4 +1,4 @@
-# serve-and-monitor-ml
+# mlops-blueprint
 
 > **Disclaimer:** This project is intended as a demonstration of serving and monitoring a machine learning workflow. The model used is a simple placeholder and is not intended for real predictive accuracy or production use. The aim is to illustrate application structure, monitoring, and UI—not to train a high-quality model.
 
